@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>縦スクロール画像ビューア</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: sans-serif;
+        }
+
+        /* フォルダ選択画面 */
+        #uploader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #111;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            color: #fff;
+            gap: 20px;
+        }
+
+        #uploader label {
+            background-color: #007bff;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        #uploader label:hover {
+            background-color: #0056b3;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* 縦スナップスクロールコンテナ */
+        #viewer {
+            width: 100%;
+            height: 100%;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            display: none; /* フォルダ選択後に表示 */
+        }
+
+        /* 各画像のスライド */
+        .slide {
+            width: 100%;
+            height: 100vh;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            position: relative;
+        }
+
+        .slide img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* カウンター表示 */
+        #counter {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 5;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- フォルダ選択画面 -->
+    <div id="uploader">
+        <h2>画像フォルダを選択してください</h2>
+        <label>
+            フォルダを開く
+            <input type="file" id="fileInput" webkitdirectory directory multiple>
+        </label>
+    </div>
+
+    <!-- 現在地カウンター -->
+    <div id="counter">0 / 0</div>
+
+    <!-- 画像閲覧ビューア -->
+    <div id="viewer"></div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploader = document.getElementById('uploader');
+        const viewer = document.getElementById('viewer');
+        const counter = document.getElementById('counter');
+
+        fileInput.addEventListener('change', (event) => {
+            const files = Array.from(event.target.files);
+            
+            // 画像ファイルのみを抽出して名前順にソート
+            const imageFiles = files
+                .filter(file => file.type.startsWith('image/'))
+                .sort((a, b) => a.name.localeCompare(b.name, 'ja', { numeric: true }));
+
+            if (imageFiles.length === 0) {
+                alert('選択されたフォルダに画像が見つかりませんでした。');
+                return;
+            }
+
+            // ビューアに画像要素を構築
+            viewer.innerHTML = '';
+            imageFiles.forEach((file, index) => {
+                const slide = document.createElement('div');
+                slide.className = 'slide';
+
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.alt = file.name;
+
+                slide.appendChild(img);
+                viewer.appendChild(slide);
+            });
+
+            // 画面切り替え
+            uploader.style.display = 'none';
+            viewer.style.display = 'block';
+            counter.style.display = 'block';
+
+            updateCounter(1, imageFiles.length);
+        });
+
+        // スクロール位置に応じたカウンターの更新
+        let currentIndex = 0;
+        viewer.addEventListener('scroll', () => {
+            const slides = viewer.querySelectorAll('.slide');
+            if (slides.length === 0) return;
+            
+            const scrollTop = viewer.scrollTop;
+            const slideHeight = slides[0].clientHeight;
+            const newIndex = Math.round(scrollTop / slideHeight) + 1;
+
+            if (newIndex !== currentIndex) {
+                currentIndex = newIndex;
+                updateCounter(currentIndex, slides.length);
+            }
+        });
+
+        function updateCounter(current, total) {
+            counter.textContent = `${current} / ${total}`;
+        }
+    </script>
+</body>
+</html>
